@@ -1,0 +1,65 @@
+#!/bin/bash
+
+printf "\033[93msubreddit's name: \033[0m"
+
+read name
+
+printf "\033[93mtype?[best(b) top(t) or new(n)](default best): \033[0m"
+read what
+
+substr='.json'
+
+if [[ "$what" == "t" ]];then
+    printf "\033[93mtime?[day(d) week(w) month(m) year(y) or all(a)](default all): \033[0m"
+    read time
+    substr='/top.json?t=all'
+    if   [[ "$time" == "d" ]];then
+        substr='/top.json?t=day'
+    elif [[ "$time" == "w" ]];then
+        substr='/top.json?t=week'
+    elif [[ "$time" == "m" ]];then
+        substr='/top.json?t=month'
+    elif [[ "$time" == "y" ]];then
+        substr='/top.json?t=year'
+    fi
+elif [[ "$what" == "n" ]];then
+    substr='/new.json'
+fi
+
+printf "\033[93mdo you want to download gifs?:(default no):(y/n): \033[0m"
+
+read yes
+
+
+header='user-agent: Mozilla/5.0 (Windows NT 10.0; Win32; x86) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4324.182 Safari/537.36'
+
+UUID=$(mktemp)
+printf "dounloading from https://www.reddit.com/r/$name$substr\n\n"
+curl -H "$header" "https://www.reddit.com/r/$name$substr" -o "$UUID"
+
+
+if [[ ! -e $name/ ]];then
+mkdir $name
+fi
+
+task(){
+    j=$name/$(echo $i | sed -r 's/https:\/\/i.redd.it\///g')
+    printf "\n\ndownloading $j\n"
+    if [[ ! -e $j ]];then
+    curl $i -o $j
+    fi
+}
+
+if [[ "$yes" == 'y' ]] || [[ "$yes" == 'Y' ]];then
+    for i in $(cat "$UUID" | sed 's/\"/\n/g' | grep "i.redd.it/" | grep -v "i.redd.it/award_images" | uniq);do
+        task
+    done
+else
+    for i in $(cat "$UUID" | sed 's/\"/\n/g' | grep "i.redd.it/" | grep -v "i.redd.it/award_images" | grep -v ".gif" | uniq) ;do
+        task
+    done
+fi
+
+rm "$UUID"
+
+printf "\n\n\033[92m_____FINISHED_____\n"
